@@ -1,14 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from uuid import UUID
 from datetime import datetime
 import hmac, hashlib
 
-from app.core.database import get_db
+from app.repositories import (
+    AbstractSubscriptionRepository,
+    AbstractPaymentRepository,
+    get_subscription_repo,
+    get_payment_repo,
+)
 from app.core.security import get_current_user, require_admin
 from app.core.config import settings
-from app.models.models import Payment, Subscription, PaymentStatus
+from app.models.models import PaymentStatus
 from app.schemas.schemas import PaymentCreate, PaymentResponse, WebhookPayload, MessageResponse
 from app.services.payment_gateway import PaymentGateway
 
@@ -24,83 +27,63 @@ gateway = PaymentGateway(
 async def create_payment(
     payload: PaymentCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    sub_repo: AbstractSubscriptionRepository = Depends(get_subscription_repo),
+    payment_repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    # Fetch subscription
-    sub_result = await db.execute(
-        select(Subscription).where(
-            Subscription.id == payload.subscription_id,
-            Subscription.member_id == current_user["user_id"],
-        )
-    )
-    subscription = sub_result.scalar_one_or_none()
-    if not subscription:
+    member_id = UUID(current_user["user_id"])
+    sub = await sub_repo.get_by_id(payload.subscription_id)
+    if not sub or str(sub.member_id) != str(member_id):
         raise HTTPException(status_code=404, detail="Assinatura não encontrada")
 
-    # Load plan price
-    plan = subscription.plan
-    amount = plan.price
-
-    # Process via gateway
+    amount = sub.plan.price
     result = await gateway.charge(
         amount=amount,
         method=payload.method,
-        member_id=current_user["user_id"],
-        description=f"Academia - {plan.name}",
-        metadata={"subscription_id": str(subscription.id)},
+        member_id=member_id,
+        description=f"Academia - {sub.plan.name}",
+        metadata={"subscription_id": str(sub.id)},
     )
 
-    payment = Payment(
-        member_id=current_user["user_id"],
-        subscription_id=subscription.id,
+    return await payment_repo.create(
+        member_id=member_id,
+        subscription_id=sub.id,
         amount=amount,
         method=payload.method,
         status=PaymentStatus.PAID if result.success else PaymentStatus.FAILED,
         provider=result.provider,
         provider_transaction_id=result.transaction_id,
         provider_payment_url=result.payment_url,
-        description=f"Academia - {plan.name}",
+        description=f"Academia - {sub.plan.name}",
         paid_at=datetime.utcnow() if result.success else None,
     )
-    db.add(payment)
-    await db.flush()
-    await db.refresh(payment)
-    return payment
 
 
 @router.get("/me", response_model=list[PaymentResponse], summary="Meu histórico de pagamentos")
 async def get_my_payments(
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    result = await db.execute(
-        select(Payment).where(Payment.member_id == current_user["user_id"])
-        .order_by(Payment.created_at.desc())
-    )
-    return result.scalars().all()
+    return await repo.list_by_member(UUID(current_user["user_id"]))
 
 
 @router.get("/", response_model=list[PaymentResponse], summary="Listar todos pagamentos (admin)")
 async def list_payments(
     _: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    result = await db.execute(select(Payment).order_by(Payment.created_at.desc()))
-    return result.scalars().all()
+    return await repo.list_all()
 
 
 @router.get("/{payment_id}", response_model=PaymentResponse, summary="Detalhe de pagamento")
 async def get_payment(
     payment_id: UUID,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    query = select(Payment).where(Payment.id == payment_id)
-    if current_user["role"] != "admin":
-        query = query.where(Payment.member_id == current_user["user_id"])
-    result = await db.execute(query)
-    payment = result.scalar_one_or_none()
+    payment = await repo.get_by_id(payment_id)
     if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+    if current_user["role"] != "admin" and str(payment.member_id) != current_user["user_id"]:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
     return payment
 
@@ -109,10 +92,9 @@ async def get_payment(
 async def refund_payment(
     payment_id: UUID,
     _: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    result = await db.execute(select(Payment).where(Payment.id == payment_id))
-    payment = result.scalar_one_or_none()
+    payment = await repo.get_by_id(payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
     if payment.status != PaymentStatus.PAID:
@@ -120,7 +102,7 @@ async def refund_payment(
 
     refund = await gateway.refund(payment.provider_transaction_id, payment.provider)
     if refund.success:
-        payment.status = PaymentStatus.REFUNDED
+        await repo.update_status(payment_id, PaymentStatus.REFUNDED)
         return MessageResponse(message="Reembolso realizado com sucesso")
 
     raise HTTPException(status_code=502, detail=f"Falha no reembolso: {refund.error_message}")
@@ -131,9 +113,8 @@ async def payment_webhook(
     request: Request,
     payload: WebhookPayload,
     x_signature: str = Header(None, alias="X-Webhook-Signature"),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractPaymentRepository = Depends(get_payment_repo),
 ):
-    # Validate webhook signature
     body = await request.body()
     expected = hmac.new(
         settings.STRIPE_WEBHOOK_SECRET.encode(),
@@ -143,11 +124,7 @@ async def payment_webhook(
     if x_signature and not hmac.compare_digest(x_signature, expected):
         raise HTTPException(status_code=401, detail="Assinatura de webhook inválida")
 
-    # Find and update payment
-    result = await db.execute(
-        select(Payment).where(Payment.provider_transaction_id == payload.transaction_id)
-    )
-    payment = result.scalar_one_or_none()
+    payment = await repo.get_by_transaction_id(payload.transaction_id)
     if payment:
         status_map = {
             "paid": PaymentStatus.PAID,
@@ -155,8 +132,7 @@ async def payment_webhook(
             "refunded": PaymentStatus.REFUNDED,
         }
         if new_status := status_map.get(payload.status):
-            payment.status = new_status
-            if new_status == PaymentStatus.PAID:
-                payment.paid_at = datetime.utcnow()
+            paid_at = datetime.utcnow() if new_status == PaymentStatus.PAID else None
+            await repo.update_status(payment.id, new_status, paid_at)
 
     return {"received": True}
