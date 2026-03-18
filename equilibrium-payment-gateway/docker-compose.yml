@@ -1,0 +1,44 @@
+services:
+  api:
+    build:
+      context: .
+      target: final
+    container_name: equilibrium-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app  # hot-reload em dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - equilibrium-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: equilibrium-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - equilibrium-network
+
+volumes:
+  redis_data:
+
+networks:
+  equilibrium-network:
+    driver: bridge
