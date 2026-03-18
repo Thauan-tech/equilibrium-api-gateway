@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from uuid import UUID
 from datetime import datetime, timedelta
 
-from app.core.database import get_db
+from app.repositories import (
+    AbstractPlanRepository,
+    AbstractSubscriptionRepository,
+    get_plan_repo,
+    get_subscription_repo,
+)
 from app.core.security import get_current_user, require_admin
-from app.models.models import Subscription, Plan, Member
 from app.schemas.schemas import SubscriptionCreate, SubscriptionResponse, MessageResponse
 
 router = APIRouter()
@@ -16,76 +18,54 @@ router = APIRouter()
 async def create_subscription(
     payload: SubscriptionCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    plan_repo: AbstractPlanRepository = Depends(get_plan_repo),
+    sub_repo: AbstractSubscriptionRepository = Depends(get_subscription_repo),
 ):
-    # Fetch plan
-    plan_result = await db.execute(select(Plan).where(Plan.id == payload.plan_id, Plan.is_active == True))
-    plan = plan_result.scalar_one_or_none()
-    if not plan:
+    plan = await plan_repo.get_by_id(payload.plan_id)
+    if not plan or not plan.is_active:
         raise HTTPException(status_code=404, detail="Plano não encontrado ou inativo")
 
-    # Check for existing active subscription
-    existing = await db.execute(
-        select(Subscription).where(
-            Subscription.member_id == current_user["user_id"],
-            Subscription.is_active == True,
-        )
-    )
-    if existing.scalar_one_or_none():
+    member_id = UUID(current_user["user_id"])
+    if await sub_repo.get_active_by_member(member_id):
         raise HTTPException(status_code=409, detail="Membro já possui uma assinatura ativa")
 
     start = datetime.utcnow()
-    subscription = Subscription(
-        member_id=current_user["user_id"],
+    return await sub_repo.create(
+        member_id=member_id,
         plan_id=plan.id,
         start_date=start,
         end_date=start + timedelta(days=plan.duration_days),
         auto_renew=payload.auto_renew,
     )
-    db.add(subscription)
-    await db.flush()
-    await db.refresh(subscription)
-    return subscription
 
 
 @router.get("/me", response_model=list[SubscriptionResponse], summary="Minhas assinaturas")
 async def get_my_subscriptions(
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractSubscriptionRepository = Depends(get_subscription_repo),
 ):
-    result = await db.execute(
-        select(Subscription).where(Subscription.member_id == current_user["user_id"])
-    )
-    return result.scalars().all()
+    return await repo.list_by_member(UUID(current_user["user_id"]))
 
 
 @router.get("/", response_model=list[SubscriptionResponse], summary="Listar todas (admin)")
 async def list_subscriptions(
     _: dict = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractSubscriptionRepository = Depends(get_subscription_repo),
 ):
-    result = await db.execute(select(Subscription))
-    return result.scalars().all()
+    return await repo.list_all()
 
 
 @router.patch("/{subscription_id}/cancel", response_model=MessageResponse, summary="Cancelar assinatura")
 async def cancel_subscription(
     subscription_id: UUID,
     current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: AbstractSubscriptionRepository = Depends(get_subscription_repo),
 ):
-    result = await db.execute(
-        select(Subscription).where(
-            Subscription.id == subscription_id,
-            Subscription.member_id == current_user["user_id"],
-        )
-    )
-    sub = result.scalar_one_or_none()
-    if not sub:
+    sub = await repo.get_by_id(subscription_id)
+    if not sub or str(sub.member_id) != current_user["user_id"]:
         raise HTTPException(status_code=404, detail="Assinatura não encontrada")
     if not sub.is_active:
         raise HTTPException(status_code=400, detail="Assinatura já cancelada")
 
-    sub.is_active = False
-    sub.auto_renew = False
+    await repo.cancel(subscription_id)
     return MessageResponse(message="Assinatura cancelada com sucesso")

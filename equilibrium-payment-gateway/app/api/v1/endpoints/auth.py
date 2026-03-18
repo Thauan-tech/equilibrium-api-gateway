@@ -1,10 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.core.database import get_db
+from app.repositories import AbstractMemberRepository, get_member_repo
 from app.core.security import verify_password, create_access_token
-from app.models.models import Member
 from app.schemas.schemas import LoginRequest, TokenResponse
 from app.core.config import settings
 
@@ -12,9 +9,11 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse, summary="Autenticar membro ou admin")
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Member).where(Member.email == payload.email))
-    member = result.scalar_one_or_none()
+async def login(
+    payload: LoginRequest,
+    repo: AbstractMemberRepository = Depends(get_member_repo),
+):
+    member = await repo.get_by_email(payload.email)
 
     if not member or not verify_password(payload.password, member.password_hash):
         raise HTTPException(
