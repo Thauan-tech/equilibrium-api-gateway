@@ -9,9 +9,12 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
+      - DATABASE_URL=postgresql+asyncpg://equilibrium_user:equilibrium_pass@postgres:5432/equilibrium_payments
       - REDIS_URL=redis://redis:6379
       - SECRET_KEY=dev-secret-key-change-in-production
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -20,6 +23,25 @@ services:
     networks:
       - equilibrium-network
     restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: equilibrium-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=equilibrium_user
+      - POSTGRES_PASSWORD=equilibrium_pass
+      - POSTGRES_DB=equilibrium_payments
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equilibrium_user -d equilibrium_payments"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - equilibrium-network
 
   redis:
     image: redis:7-alpine
@@ -37,6 +59,7 @@ services:
       - equilibrium-network
 
 volumes:
+  postgres_data:
   redis_data:
 
 networks:
