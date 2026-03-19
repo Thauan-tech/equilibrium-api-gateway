@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: .
+      context: ./equilibrium-payment-gateway
       target: final
     container_name: equilibrium-api
     ports:
@@ -15,7 +15,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./app:/app/app  # hot-reload em dev
+      - ./equilibrium-payment-gateway/app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - equilibrium-network
