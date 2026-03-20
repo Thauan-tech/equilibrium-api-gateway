@@ -14,6 +14,13 @@ jobs:
       run:
         working-directory: equilibrium-payment-gateway
 
+    env:
+      # Valores dummy para evitar erros de validação do Pydantic durante os testes
+      SECRET_KEY: "ci-secret-key-for-testing-only"
+      DATABASE_URL: "postgresql+asyncpg://user:pass@localhost:5432/test"
+      REDIS_URL: "redis://localhost:6379"
+      ADMIN_SETUP_KEY: "ci-setup-key"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -45,9 +52,10 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: equilibrium-payment-gateway/requirements.txt
 
-      - name: Instalar Ruff
-        run: pip install ruff
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
 
       - name: Verificar lint
         run: ruff check .
@@ -71,8 +79,8 @@ jobs:
         run: terraform fmt -check -recursive
         working-directory: infra/terraform
 
-      - name: Terraform validate (staging)
-        working-directory: infra/terraform/environments/staging
+      - name: Terraform validate
+        working-directory: infra/terraform
         run: |
           terraform init -backend=false
           terraform validate

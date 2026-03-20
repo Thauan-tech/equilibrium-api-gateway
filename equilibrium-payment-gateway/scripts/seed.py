@@ -2,6 +2,7 @@
 Script para popular o banco com dados iniciais de desenvolvimento.
 Execute: python scripts/seed.py
 """
+
 import asyncio
 import sys
 import os

@@ -4,14 +4,15 @@ from datetime import datetime
 
 from app.repositories.base import AbstractMemberRepository
 from app.repositories.memory.entities import MemberEntity
-from app.models.models import MemberStatus
 
 
 class InMemoryMemberRepository(AbstractMemberRepository):
     def __init__(self) -> None:
         self._store: dict[UUID, MemberEntity] = {}
 
-    async def create(self, *, name, email, cpf, phone, password_hash, is_admin=False) -> MemberEntity:
+    async def create(
+        self, *, name, email, cpf, phone, password_hash, is_admin=False
+    ) -> MemberEntity:
         entity = MemberEntity(
             name=name,
             email=email,
@@ -32,7 +33,9 @@ class InMemoryMemberRepository(AbstractMemberRepository):
     async def get_by_email(self, email: str) -> Optional[MemberEntity]:
         return next((m for m in self._store.values() if m.email == email), None)
 
-    async def find_by_email_or_cpf(self, email: str, cpf: str) -> Optional[MemberEntity]:
+    async def find_by_email_or_cpf(
+        self, email: str, cpf: str
+    ) -> Optional[MemberEntity]:
         return next(
             (m for m in self._store.values() if m.email == email or m.cpf == cpf),
             None,

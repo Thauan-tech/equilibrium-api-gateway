@@ -30,7 +30,9 @@ class PaymentProvider(ABC):
         pass
 
     @abstractmethod
-    async def refund_payment(self, transaction_id: str, amount: Optional[float] = None) -> PaymentResult:
+    async def refund_payment(
+        self, transaction_id: str, amount: Optional[float] = None
+    ) -> PaymentResult:
         pass
 
     @abstractmethod
@@ -45,7 +47,9 @@ class StripeProvider(PaymentProvider):
         self.api_key = api_key
         self.provider_name = "stripe"
 
-    async def process_payment(self, amount, method, member_id, description, metadata=None) -> PaymentResult:
+    async def process_payment(
+        self, amount, method, member_id, description, metadata=None
+    ) -> PaymentResult:
         # TODO: Integrar com stripe SDK
         # import stripe
         # stripe.api_key = self.api_key
@@ -58,7 +62,9 @@ class StripeProvider(PaymentProvider):
 
     async def refund_payment(self, transaction_id, amount=None) -> PaymentResult:
         # TODO: stripe.Refund.create(payment_intent=transaction_id)
-        return PaymentResult(success=True, transaction_id=transaction_id, provider=self.provider_name)
+        return PaymentResult(
+            success=True, transaction_id=transaction_id, provider=self.provider_name
+        )
 
     async def get_payment_status(self, transaction_id) -> str:
         # TODO: stripe.PaymentIntent.retrieve(transaction_id)
@@ -72,7 +78,9 @@ class PagarmeProvider(PaymentProvider):
         self.api_key = api_key
         self.provider_name = "pagarme"
 
-    async def process_payment(self, amount, method, member_id, description, metadata=None) -> PaymentResult:
+    async def process_payment(
+        self, amount, method, member_id, description, metadata=None
+    ) -> PaymentResult:
         # TODO: Integrar com SDK do Pagar.me
         if method == PaymentMethod.PIX:
             return PaymentResult(
@@ -88,10 +96,16 @@ class PagarmeProvider(PaymentProvider):
                 payment_url="https://boleto.pagarme.com/mock/123456789",
                 provider=self.provider_name,
             )
-        return PaymentResult(success=False, error_message="Método não suportado", provider=self.provider_name)
+        return PaymentResult(
+            success=False,
+            error_message="Método não suportado",
+            provider=self.provider_name,
+        )
 
     async def refund_payment(self, transaction_id, amount=None) -> PaymentResult:
-        return PaymentResult(success=True, transaction_id=transaction_id, provider=self.provider_name)
+        return PaymentResult(
+            success=True, transaction_id=transaction_id, provider=self.provider_name
+        )
 
     async def get_payment_status(self, transaction_id) -> str:
         return "paid"
@@ -131,9 +145,13 @@ class PaymentGateway:
         metadata: Optional[dict] = None,
     ) -> PaymentResult:
         provider = self._select_provider(method)
-        return await provider.process_payment(amount, method, member_id, description, metadata)
+        return await provider.process_payment(
+            amount, method, member_id, description, metadata
+        )
 
-    async def refund(self, transaction_id: str, provider_name: str, amount: Optional[float] = None) -> PaymentResult:
+    async def refund(
+        self, transaction_id: str, provider_name: str, amount: Optional[float] = None
+    ) -> PaymentResult:
         provider = self._providers.get(provider_name)
         if not provider:
             raise ValueError(f"Provedor '{provider_name}' não encontrado")

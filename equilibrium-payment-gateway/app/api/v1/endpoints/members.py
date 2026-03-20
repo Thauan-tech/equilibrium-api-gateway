@@ -3,12 +3,20 @@ from uuid import UUID
 
 from app.repositories import AbstractMemberRepository, get_member_repo
 from app.core.security import get_current_user, require_admin, hash_password
-from app.schemas.schemas import MemberCreate, MemberUpdate, MemberResponse, MessageResponse, PromoteRequest
+from app.schemas.schemas import (
+    MemberCreate,
+    MemberUpdate,
+    MemberResponse,
+    MessageResponse,
+    PromoteRequest,
+)
 
 router = APIRouter()
 
 
-@router.post("/", response_model=MemberResponse, status_code=201, summary="Cadastrar novo membro")
+@router.post(
+    "/", response_model=MemberResponse, status_code=201, summary="Cadastrar novo membro"
+)
 async def create_member(
     payload: MemberCreate,
     repo: AbstractMemberRepository = Depends(get_member_repo),
@@ -46,7 +54,11 @@ async def list_members(
     return await repo.list(offset=(page - 1) * per_page, limit=per_page)
 
 
-@router.get("/{member_id}", response_model=MemberResponse, summary="Buscar membro por ID (admin)")
+@router.get(
+    "/{member_id}",
+    response_model=MemberResponse,
+    summary="Buscar membro por ID (admin)",
+)
 async def get_member(
     member_id: UUID,
     _: dict = Depends(require_admin),
@@ -58,7 +70,9 @@ async def get_member(
     return member
 
 
-@router.patch("/{member_id}", response_model=MemberResponse, summary="Atualizar membro (admin)")
+@router.patch(
+    "/{member_id}", response_model=MemberResponse, summary="Atualizar membro (admin)"
+)
 async def update_member(
     member_id: UUID,
     payload: MemberUpdate,
@@ -71,7 +85,9 @@ async def update_member(
     return member
 
 
-@router.delete("/{member_id}", response_model=MessageResponse, summary="Remover membro (admin)")
+@router.delete(
+    "/{member_id}", response_model=MessageResponse, summary="Remover membro (admin)"
+)
 async def delete_member(
     member_id: UUID,
     _: dict = Depends(require_admin),
@@ -82,7 +98,11 @@ async def delete_member(
     return MessageResponse(message="Membro removido com sucesso")
 
 
-@router.patch("/{member_id}/promote", response_model=MemberResponse, summary="Promover ou revogar admin (admin)")
+@router.patch(
+    "/{member_id}/promote",
+    response_model=MemberResponse,
+    summary="Promover ou revogar admin (admin)",
+)
 async def promote_member(
     member_id: UUID,
     payload: PromoteRequest,
@@ -90,7 +110,9 @@ async def promote_member(
     repo: AbstractMemberRepository = Depends(get_member_repo),
 ):
     if str(member_id) == current_user["user_id"]:
-        raise HTTPException(status_code=400, detail="Você não pode alterar seu próprio nível de admin")
+        raise HTTPException(
+            status_code=400, detail="Você não pode alterar seu próprio nível de admin"
+        )
 
     member = await repo.update(member_id, is_admin=payload.is_admin)
     if not member:

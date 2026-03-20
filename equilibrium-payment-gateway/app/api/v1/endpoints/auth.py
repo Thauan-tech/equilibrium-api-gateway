@@ -3,7 +3,12 @@ from fastapi.security import APIKeyHeader
 
 from app.repositories import AbstractMemberRepository, get_member_repo
 from app.core.security import verify_password, create_access_token, hash_password
-from app.schemas.schemas import LoginRequest, TokenResponse, AdminSetupRequest, MemberResponse
+from app.schemas.schemas import (
+    LoginRequest,
+    TokenResponse,
+    AdminSetupRequest,
+    MemberResponse,
+)
 from app.core.config import settings
 
 router = APIRouter()
@@ -11,7 +16,9 @@ router = APIRouter()
 setup_key_header = APIKeyHeader(name="X-Setup-Key", auto_error=False)
 
 
-@router.post("/login", response_model=TokenResponse, summary="Autenticar membro ou admin")
+@router.post(
+    "/login", response_model=TokenResponse, summary="Autenticar membro ou admin"
+)
 async def login(
     payload: LoginRequest,
     repo: AbstractMemberRepository = Depends(get_member_repo),
@@ -25,7 +32,9 @@ async def login(
         )
 
     if member.status.value == "suspended":
-        raise HTTPException(status_code=403, detail="Conta suspensa. Entre em contato com a academia.")
+        raise HTTPException(
+            status_code=403, detail="Conta suspensa. Entre em contato com a academia."
+        )
 
     token = create_access_token(
         data={

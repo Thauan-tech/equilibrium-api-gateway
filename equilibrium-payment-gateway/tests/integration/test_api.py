@@ -8,7 +8,9 @@ from app.core.database import get_db, Base
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+TestSessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 async def override_get_db():
@@ -44,6 +46,7 @@ async def client():
 
 # ─── Health ──────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_health_check(client):
     response = await client.get("/health")
@@ -52,6 +55,7 @@ async def test_health_check(client):
 
 
 # ─── Members ─────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_create_member(client):
@@ -96,20 +100,27 @@ async def test_create_member_invalid_cpf(client):
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_login_success(client):
     # Cria membro
-    await client.post("/api/v1/members/", json={
-        "name": "Maria Souza",
-        "email": "maria@academia.com",
-        "cpf": "98765432100",
-        "password": "minhasenha",
-    })
+    await client.post(
+        "/api/v1/members/",
+        json={
+            "name": "Maria Souza",
+            "email": "maria@academia.com",
+            "cpf": "98765432100",
+            "password": "minhasenha",
+        },
+    )
     # Faz login
-    response = await client.post("/api/v1/auth/login", json={
-        "email": "maria@academia.com",
-        "password": "minhasenha",
-    })
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "maria@academia.com",
+            "password": "minhasenha",
+        },
+    )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
@@ -118,20 +129,27 @@ async def test_login_success(client):
 
 @pytest.mark.asyncio
 async def test_login_wrong_password(client):
-    await client.post("/api/v1/members/", json={
-        "name": "Maria Souza",
-        "email": "maria@academia.com",
-        "cpf": "98765432100",
-        "password": "minhasenha",
-    })
-    response = await client.post("/api/v1/auth/login", json={
-        "email": "maria@academia.com",
-        "password": "senhaerrada",
-    })
+    await client.post(
+        "/api/v1/members/",
+        json={
+            "name": "Maria Souza",
+            "email": "maria@academia.com",
+            "cpf": "98765432100",
+            "password": "minhasenha",
+        },
+    )
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "maria@academia.com",
+            "password": "senhaerrada",
+        },
+    )
     assert response.status_code == 401
 
 
 # ─── Plans ───────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_plans_public(client):
