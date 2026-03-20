@@ -25,7 +25,11 @@ class AbstractMemberRepository(ABC):
         cpf: str,
         phone: Optional[str],
         password_hash: str,
+        is_admin: bool = False,
     ) -> Any: ...
+
+    @abstractmethod
+    async def has_any_admin(self) -> bool: ...
 
     @abstractmethod
     async def get_by_id(self, member_id: UUID) -> Optional[Any]: ...

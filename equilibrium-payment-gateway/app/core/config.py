@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     API_KEY_HEADER: str = "X-API-Key"
+    ADMIN_SETUP_KEY: str = "change-this-setup-key"
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/equilibrium_payments"

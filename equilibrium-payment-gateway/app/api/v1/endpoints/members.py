@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.repositories import AbstractMemberRepository, get_member_repo
 from app.core.security import get_current_user, require_admin, hash_password
-from app.schemas.schemas import MemberCreate, MemberUpdate, MemberResponse, MessageResponse
+from app.schemas.schemas import MemberCreate, MemberUpdate, MemberResponse, MessageResponse, PromoteRequest
 
 router = APIRouter()
 
@@ -80,3 +80,19 @@ async def delete_member(
     if not await repo.delete(member_id):
         raise HTTPException(status_code=404, detail="Membro não encontrado")
     return MessageResponse(message="Membro removido com sucesso")
+
+
+@router.patch("/{member_id}/promote", response_model=MemberResponse, summary="Promover ou revogar admin (admin)")
+async def promote_member(
+    member_id: UUID,
+    payload: PromoteRequest,
+    current_user: dict = Depends(require_admin),
+    repo: AbstractMemberRepository = Depends(get_member_repo),
+):
+    if str(member_id) == current_user["user_id"]:
+        raise HTTPException(status_code=400, detail="Você não pode alterar seu próprio nível de admin")
+
+    member = await repo.update(member_id, is_admin=payload.is_admin)
+    if not member:
+        raise HTTPException(status_code=404, detail="Membro não encontrado")
+    return member

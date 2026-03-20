@@ -58,9 +58,37 @@ class MemberResponse(BaseModel):
     cpf: str
     phone: Optional[str]
     status: MemberStatus
+    is_admin: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AdminSetupRequest(BaseModel):
+    name: str
+    email: EmailStr
+    cpf: str
+    phone: Optional[str] = None
+    password: str
+
+    @field_validator("cpf")
+    @classmethod
+    def validate_cpf(cls, v: str) -> str:
+        digits = re.sub(r"\D", "", v)
+        if len(digits) != 11:
+            raise ValueError("CPF inválido")
+        return f"{digits[:3]}.{digits[3:6]}.{digits[6:9]}-{digits[9:]}"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Senha deve ter no mínimo 8 caracteres")
+        return v
+
+
+class PromoteRequest(BaseModel):
+    is_admin: bool
 
 
 # ─── Plan ────────────────────────────────────────────────────────────────────

@@ -11,16 +11,20 @@ class InMemoryMemberRepository(AbstractMemberRepository):
     def __init__(self) -> None:
         self._store: dict[UUID, MemberEntity] = {}
 
-    async def create(self, *, name, email, cpf, phone, password_hash) -> MemberEntity:
+    async def create(self, *, name, email, cpf, phone, password_hash, is_admin=False) -> MemberEntity:
         entity = MemberEntity(
             name=name,
             email=email,
             cpf=cpf,
             phone=phone,
             password_hash=password_hash,
+            is_admin=is_admin,
         )
         self._store[entity.id] = entity
         return entity
+
+    async def has_any_admin(self) -> bool:
+        return any(m.is_admin for m in self._store.values())
 
     async def get_by_id(self, member_id: UUID) -> Optional[MemberEntity]:
         return self._store.get(member_id)
