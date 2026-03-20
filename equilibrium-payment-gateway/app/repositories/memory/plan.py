@@ -9,7 +9,9 @@ class InMemoryPlanRepository(AbstractPlanRepository):
     def __init__(self) -> None:
         self._store: dict[UUID, PlanEntity] = {}
 
-    async def create(self, *, name, description, plan_type, price, duration_days) -> PlanEntity:
+    async def create(
+        self, *, name, description, plan_type, price, duration_days
+    ) -> PlanEntity:
         entity = PlanEntity(
             name=name,
             description=description,

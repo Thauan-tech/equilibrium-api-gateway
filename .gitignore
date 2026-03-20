@@ -95,6 +95,17 @@ secrets/
 monitoring/data/
 grafana/data/
 
+# ─── Terraform ────────────────────────────────────────────────────────────────
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 *.bak
 *.tmp

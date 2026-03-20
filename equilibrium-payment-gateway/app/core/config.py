@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     ADMIN_SETUP_KEY: str = "change-this-setup-key"
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/equilibrium_payments"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://user:password@localhost:5432/equilibrium_payments"
+    )
 
     # Redis (cache & rate limiting)
     REDIS_URL: str = "redis://localhost:6379"

@@ -9,6 +9,7 @@ from app.models.models import MemberStatus, PlanType, PaymentStatus, PaymentMeth
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
 
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -21,6 +22,7 @@ class TokenResponse(BaseModel):
 
 
 # ─── Member ──────────────────────────────────────────────────────────────────
+
 
 class MemberCreate(BaseModel):
     name: str
@@ -93,6 +95,7 @@ class PromoteRequest(BaseModel):
 
 # ─── Plan ────────────────────────────────────────────────────────────────────
 
+
 class PlanCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -130,6 +133,7 @@ class PlanResponse(BaseModel):
 
 # ─── Subscription ────────────────────────────────────────────────────────────
 
+
 class SubscriptionCreate(BaseModel):
     plan_id: UUID
     auto_renew: bool = False
@@ -149,6 +153,7 @@ class SubscriptionResponse(BaseModel):
 
 
 # ─── Payment ─────────────────────────────────────────────────────────────────
+
 
 class PaymentCreate(BaseModel):
     subscription_id: UUID
@@ -174,6 +179,7 @@ class PaymentResponse(BaseModel):
 
 # ─── Webhook ─────────────────────────────────────────────────────────────────
 
+
 class WebhookPayload(BaseModel):
     provider: str
     event: str
@@ -184,6 +190,7 @@ class WebhookPayload(BaseModel):
 
 
 # ─── Generic ─────────────────────────────────────────────────────────────────
+
 
 class MessageResponse(BaseModel):
     message: str

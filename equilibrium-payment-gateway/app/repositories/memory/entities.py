@@ -5,6 +5,7 @@ Os nomes dos campos são idênticos aos das colunas ORM para que os
 Pydantic schemas (model_config = {"from_attributes": True}) funcionem
 sem qualquer alteração — basta passar a entidade no lugar do objeto ORM.
 """
+
 from dataclasses import dataclass, field
 from typing import Optional, Any
 from uuid import UUID, uuid4
@@ -43,7 +44,7 @@ class PlanEntity:
 class SubscriptionEntity:
     member_id: UUID
     plan_id: UUID
-    plan: Any          # PlanEntity — resolvido no momento da criação
+    plan: Any  # PlanEntity — resolvido no momento da criação
     start_date: datetime
     end_date: datetime
     id: UUID = field(default_factory=uuid4)

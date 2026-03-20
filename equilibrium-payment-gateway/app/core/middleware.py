@@ -27,9 +27,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Response-Time"] = f"{duration_ms:.1f}ms"
 
-        logger.info(
-            f"← [{request_id}] {response.status_code} ({duration_ms:.1f}ms)"
-        )
+        logger.info(f"← [{request_id}] {response.status_code} ({duration_ms:.1f}ms)")
 
         return response
 

@@ -16,7 +16,7 @@ Exemplo de migração futura:
     async def get_member_repo(db: AsyncSession = Depends(get_db)):
         return PostgresMemberRepository(db)
 """
-import os
+
 from functools import lru_cache
 
 from app.repositories.base import (
@@ -36,6 +36,7 @@ from app.repositories.memory import (
 # ─── Singletons in-memory ────────────────────────────────────────────────────
 # Um único objeto por tipo garante estado compartilhado entre requisições,
 # comportamento esperado durante validação/testes manuais.
+
 
 @lru_cache(maxsize=1)
 def _member_repo() -> InMemoryMemberRepository:
@@ -58,6 +59,7 @@ def _payment_repo() -> InMemoryPaymentRepository:
 
 
 # ─── FastAPI Depends ──────────────────────────────────────────────────────────
+
 
 def get_member_repo() -> AbstractMemberRepository:
     return _member_repo()

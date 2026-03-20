@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from uuid import UUID
 from datetime import datetime
-import hmac, hashlib
+import hmac
+import hashlib
 
 from app.repositories import (
     AbstractSubscriptionRepository,
@@ -12,7 +13,12 @@ from app.repositories import (
 from app.core.security import get_current_user, require_admin
 from app.core.config import settings
 from app.models.models import PaymentStatus
-from app.schemas.schemas import PaymentCreate, PaymentResponse, WebhookPayload, MessageResponse
+from app.schemas.schemas import (
+    PaymentCreate,
+    PaymentResponse,
+    WebhookPayload,
+    MessageResponse,
+)
 from app.services.payment_gateway import PaymentGateway
 
 router = APIRouter()
@@ -23,7 +29,9 @@ gateway = PaymentGateway(
 )
 
 
-@router.post("/", response_model=PaymentResponse, status_code=201, summary="Realizar pagamento")
+@router.post(
+    "/", response_model=PaymentResponse, status_code=201, summary="Realizar pagamento"
+)
 async def create_payment(
     payload: PaymentCreate,
     current_user: dict = Depends(get_current_user),
@@ -58,7 +66,9 @@ async def create_payment(
     )
 
 
-@router.get("/me", response_model=list[PaymentResponse], summary="Meu histórico de pagamentos")
+@router.get(
+    "/me", response_model=list[PaymentResponse], summary="Meu histórico de pagamentos"
+)
 async def get_my_payments(
     current_user: dict = Depends(get_current_user),
     repo: AbstractPaymentRepository = Depends(get_payment_repo),
@@ -66,7 +76,9 @@ async def get_my_payments(
     return await repo.list_by_member(UUID(current_user["user_id"]))
 
 
-@router.get("/", response_model=list[PaymentResponse], summary="Listar todos pagamentos (admin)")
+@router.get(
+    "/", response_model=list[PaymentResponse], summary="Listar todos pagamentos (admin)"
+)
 async def list_payments(
     _: dict = Depends(require_admin),
     repo: AbstractPaymentRepository = Depends(get_payment_repo),
@@ -74,7 +86,9 @@ async def list_payments(
     return await repo.list_all()
 
 
-@router.get("/{payment_id}", response_model=PaymentResponse, summary="Detalhe de pagamento")
+@router.get(
+    "/{payment_id}", response_model=PaymentResponse, summary="Detalhe de pagamento"
+)
 async def get_payment(
     payment_id: UUID,
     current_user: dict = Depends(get_current_user),
@@ -83,12 +97,19 @@ async def get_payment(
     payment = await repo.get_by_id(payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
-    if current_user["role"] != "admin" and str(payment.member_id) != current_user["user_id"]:
+    if (
+        current_user["role"] != "admin"
+        and str(payment.member_id) != current_user["user_id"]
+    ):
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
     return payment
 
 
-@router.post("/{payment_id}/refund", response_model=MessageResponse, summary="Reembolsar pagamento (admin)")
+@router.post(
+    "/{payment_id}/refund",
+    response_model=MessageResponse,
+    summary="Reembolsar pagamento (admin)",
+)
 async def refund_payment(
     payment_id: UUID,
     _: dict = Depends(require_admin),
@@ -98,14 +119,19 @@ async def refund_payment(
     if not payment:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
     if payment.status != PaymentStatus.PAID:
-        raise HTTPException(status_code=400, detail="Apenas pagamentos confirmados podem ser reembolsados")
+        raise HTTPException(
+            status_code=400,
+            detail="Apenas pagamentos confirmados podem ser reembolsados",
+        )
 
     refund = await gateway.refund(payment.provider_transaction_id, payment.provider)
     if refund.success:
         await repo.update_status(payment_id, PaymentStatus.REFUNDED)
         return MessageResponse(message="Reembolso realizado com sucesso")
 
-    raise HTTPException(status_code=502, detail=f"Falha no reembolso: {refund.error_message}")
+    raise HTTPException(
+        status_code=502, detail=f"Falha no reembolso: {refund.error_message}"
+    )
 
 
 @router.post("/webhook", summary="Receber notificações de provedores de pagamento")

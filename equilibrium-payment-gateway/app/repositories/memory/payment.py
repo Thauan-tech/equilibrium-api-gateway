@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.repositories.base import AbstractPaymentRepository
 from app.repositories.memory.entities import PaymentEntity
-from app.models.models import PaymentStatus, PaymentMethod
+from app.models.models import PaymentStatus
 
 
 class InMemoryPaymentRepository(AbstractPaymentRepository):
@@ -43,9 +43,15 @@ class InMemoryPaymentRepository(AbstractPaymentRepository):
     async def get_by_id(self, payment_id: UUID) -> Optional[PaymentEntity]:
         return self._store.get(payment_id)
 
-    async def get_by_transaction_id(self, transaction_id: str) -> Optional[PaymentEntity]:
+    async def get_by_transaction_id(
+        self, transaction_id: str
+    ) -> Optional[PaymentEntity]:
         return next(
-            (p for p in self._store.values() if p.provider_transaction_id == transaction_id),
+            (
+                p
+                for p in self._store.values()
+                if p.provider_transaction_id == transaction_id
+            ),
             None,
         )
 

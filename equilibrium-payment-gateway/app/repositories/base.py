@@ -6,16 +6,16 @@ Cada repositório define o contrato que toda implementação
 uma nova implementação basta criar uma subclasse e injetar
 via deps.py — nenhum endpoint precisa ser alterado.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 from uuid import UUID
 from datetime import datetime
 
-from app.models.models import MemberStatus, PaymentStatus, PaymentMethod
+from app.models.models import PaymentStatus, PaymentMethod
 
 
 class AbstractMemberRepository(ABC):
-
     @abstractmethod
     async def create(
         self,
@@ -51,7 +51,6 @@ class AbstractMemberRepository(ABC):
 
 
 class AbstractPlanRepository(ABC):
-
     @abstractmethod
     async def create(
         self,
@@ -77,7 +76,6 @@ class AbstractPlanRepository(ABC):
 
 
 class AbstractSubscriptionRepository(ABC):
-
     @abstractmethod
     async def create(
         self,
@@ -106,7 +104,6 @@ class AbstractSubscriptionRepository(ABC):
 
 
 class AbstractPaymentRepository(ABC):
-
     @abstractmethod
     async def create(
         self,

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from uuid import UUID
 
 from app.repositories import AbstractPlanRepository, get_plan_repo
-from app.core.security import get_current_user, require_admin
+from app.core.security import require_admin
 from app.schemas.schemas import PlanCreate, PlanUpdate, PlanResponse, MessageResponse
 
 router = APIRouter()
@@ -27,7 +27,9 @@ async def get_plan(
     return plan
 
 
-@router.post("/", response_model=PlanResponse, status_code=201, summary="Criar plano (admin)")
+@router.post(
+    "/", response_model=PlanResponse, status_code=201, summary="Criar plano (admin)"
+)
 async def create_plan(
     payload: PlanCreate,
     _: dict = Depends(require_admin),
@@ -36,7 +38,9 @@ async def create_plan(
     return await repo.create(**payload.model_dump())
 
 
-@router.patch("/{plan_id}", response_model=PlanResponse, summary="Atualizar plano (admin)")
+@router.patch(
+    "/{plan_id}", response_model=PlanResponse, summary="Atualizar plano (admin)"
+)
 async def update_plan(
     plan_id: UUID,
     payload: PlanUpdate,
@@ -49,7 +53,9 @@ async def update_plan(
     return plan
 
 
-@router.delete("/{plan_id}", response_model=MessageResponse, summary="Desativar plano (admin)")
+@router.delete(
+    "/{plan_id}", response_model=MessageResponse, summary="Desativar plano (admin)"
+)
 async def deactivate_plan(
     plan_id: UUID,
     _: dict = Depends(require_admin),

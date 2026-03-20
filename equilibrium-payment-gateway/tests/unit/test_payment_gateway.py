@@ -1,17 +1,16 @@
 import pytest
-from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from app.services.payment_gateway import (
     PaymentGateway,
     StripeProvider,
     PagarmeProvider,
-    PaymentResult,
 )
 from app.models.models import PaymentMethod
 
 
 # ─── StripeProvider ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_stripe_process_payment_success():
@@ -35,6 +34,7 @@ async def test_stripe_refund_success():
 
 
 # ─── PagarmeProvider ─────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_pagarme_pix_returns_payment_url():
@@ -64,6 +64,7 @@ async def test_pagarme_boleto_returns_payment_url():
 
 
 # ─── PaymentGateway ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_gateway_routes_card_to_stripe():

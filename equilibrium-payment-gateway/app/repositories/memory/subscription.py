@@ -1,6 +1,5 @@
 from typing import Optional
 from uuid import UUID
-from datetime import datetime
 
 from app.repositories.base import AbstractSubscriptionRepository
 from app.repositories.memory.entities import SubscriptionEntity
@@ -36,20 +35,20 @@ class InMemorySubscriptionRepository(AbstractSubscriptionRepository):
     async def get_by_id(self, subscription_id: UUID) -> Optional[SubscriptionEntity]:
         return self._store.get(subscription_id)
 
-    async def get_active_by_member(self, member_id: UUID) -> Optional[SubscriptionEntity]:
+    async def get_active_by_member(
+        self, member_id: UUID
+    ) -> Optional[SubscriptionEntity]:
         return next(
             (
-                s for s in self._store.values()
+                s
+                for s in self._store.values()
                 if str(s.member_id) == str(member_id) and s.is_active
             ),
             None,
         )
 
     async def list_by_member(self, member_id: UUID) -> list[SubscriptionEntity]:
-        return [
-            s for s in self._store.values()
-            if str(s.member_id) == str(member_id)
-        ]
+        return [s for s in self._store.values() if str(s.member_id) == str(member_id)]
 
     async def list_all(self) -> list[SubscriptionEntity]:
         return list(self._store.values())
