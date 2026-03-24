@@ -1,0 +1,56 @@
+name: Infra Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Ação Terraform"
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7"
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -var="key_pair_name=${{ secrets.EC2_KEY_PAIR_NAME }}"
+
+      - name: Terraform Apply
+        if: github.event.inputs.action == 'apply'
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve -var="key_pair_name=${{ secrets.EC2_KEY_PAIR_NAME }}"
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra/terraform
+        run: terraform destroy -auto-approve -var="key_pair_name=${{ secrets.EC2_KEY_PAIR_NAME }}"
+
+      - name: Outputs
+        if: github.event.inputs.action == 'apply'
+        working-directory: infra/terraform
+        run: |
+          echo "### Infra criada" >> $GITHUB_STEP_SUMMARY
+          echo "- **EC2 IP:** \`$(terraform output -raw ec2_public_ip)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECR URL:** \`$(terraform output -raw ecr_repository_url)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API URL:** \`$(terraform output -raw api_url)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SSH:** \`$(terraform output -raw ssh_command)\`" >> $GITHUB_STEP_SUMMARY
