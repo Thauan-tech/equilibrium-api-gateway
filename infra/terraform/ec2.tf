@@ -27,7 +27,7 @@ resource "aws_iam_instance_profile" "ec2" {
 
 resource "aws_security_group" "ec2" {
   name        = "${var.project}-ec2-sg"
-  description = "EC2 — API exposta na 8000, SSH restrito"
+  description = "EC2 - API exposta na 8000, SSH restrito"
 
   ingress {
     description = "API"
