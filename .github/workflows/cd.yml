@@ -187,8 +187,12 @@ jobs:
                 driver: bridge
             EOF_REMOTE
 
-            docker compose -f /opt/app/docker-compose.yml up -d postgres redis
-            sleep 10
+            if [ ! -f /opt/app/.env ]; then
+              echo "ERRO: /opt/app/.env nao encontrado na EC2."
+              exit 1
+            fi
+
+            docker compose -f /opt/app/docker-compose.yml up -d --wait postgres redis
 
             docker run --rm \
               --network equilibrium-network \
@@ -196,7 +200,7 @@ jobs:
               $ECR_REPOSITORY_URI:$IMAGE_TAG \
               alembic upgrade head
 
-            docker compose -f /opt/app/docker-compose.yml up -d api
+            docker compose -f /opt/app/docker-compose.yml up -d --force-recreate api
             docker image prune -f
 
       - name: Health check
