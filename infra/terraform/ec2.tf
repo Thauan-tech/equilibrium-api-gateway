@@ -99,35 +99,25 @@ resource "aws_instance" "api" {
     systemctl enable docker
     systemctl start docker
     usermod -aG docker ec2-user
+    
+  # login ECR automático via IAM role
+REGION="us-east-1"
+REPO="SEU_ECR_REPOSITORY_URI:latest"
 
-    # Instalar Docker Compose v2
-    mkdir -p /usr/local/lib/docker/cli-plugins
-    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
-      -o /usr/local/lib/docker/cli-plugins/docker-compose
-    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# loop infinito (auto deploy simples)
+while true; do
+  docker pull $REPO
+  docker stop api || true
+  docker rm api || true
 
-    # Autenticar no ECR via IAM role (sem credenciais hardcoded)
-    AWS_REGION="${var.aws_region}"
-    ECR_REGISTRY="${aws_ecr_repository.api.registry_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+  docker run -d \
+    --name api \
+    -p 8000:8000 \
+    $REPO
 
-    # Adicionar helper de credenciais do ECR
-    dnf install -y amazon-ecr-credential-helper
-    mkdir -p /home/ec2-user/.docker
-    cat > /home/ec2-user/.docker/config.json <<DOCKER
-    {
-      "credHelpers": {
-        "$ECR_REGISTRY": "ecr-login"
-      }
-    }
-    DOCKER
-    chown -R ec2-user:ec2-user /home/ec2-user/.docker
-
-    # Diretório da aplicação
-    mkdir -p /opt/app
-    chown ec2-user:ec2-user /opt/app
-  EOF
-
-  tags = { Name = "${var.project}-api" }
+  sleep 60
+done
+    
 }
 
 # ─── Elastic IP (IP fixo para DNS/SSH) ───────────────────────────────────────
