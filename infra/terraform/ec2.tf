@@ -91,22 +91,27 @@ resource "aws_instance" "api" {
 
   # Instala Docker e autentica no ECR na inicialização
   user_data = <<-EOF
-    #!/bin/bash
-    set -e
+  #!/bin/bash
+  set -e
 
-    # Instalar Docker
-    dnf install -y docker
-    systemctl enable docker
-    systemctl start docker
-    usermod -aG docker ec2-user
-    
-  # login ECR automático via IAM role
+# Instalar Docker
+dnf install -y docker
+systemctl enable docker
+systemctl start docker
+usermod -aG docker ec2-user
+
+# Variáveis
 REGION="us-east-1"
-REPO="SEU_ECR_REPOSITORY_URI:latest"
+REPO="${aws_ecr_repository.api.repository_url}:latest"
 
-# loop infinito (auto deploy simples)
+# Login ECR via IAM role
+aws ecr get-login-password --region $REGION | \
+  docker login --username AWS --password-stdin $(echo $REPO | cut -d'/' -f1)
+
+# Loop simples de deploy
 while true; do
   docker pull $REPO
+
   docker stop api || true
   docker rm api || true
 
@@ -117,7 +122,7 @@ while true; do
 
   sleep 60
 done
-    
+EOF    
 }
 
 # ─── Elastic IP (IP fixo para DNS/SSH) ───────────────────────────────────────
