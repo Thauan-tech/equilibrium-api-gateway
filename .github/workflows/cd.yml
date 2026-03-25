@@ -18,6 +18,7 @@ jobs:
           aws-region: us-east-1
 
       - uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
 
       - name: Build and push
         working-directory: equilibrium-payment-gateway
